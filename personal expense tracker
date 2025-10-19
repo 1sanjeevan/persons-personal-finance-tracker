@@ -1,0 +1,94 @@
+
+import streamlit as st
+import pandas as pd
+import sqlite3
+from datetime import date
+
+# -----------------------------
+# Database Setup
+# -----------------------------
+def init_db():
+    conn = sqlite3.connect("expenses.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT,
+            category TEXT,
+            amount REAL,
+            notes TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def insert_expense(date, category, amount, notes):
+    conn = sqlite3.connect("expenses.db")
+    c = conn.cursor()
+    c.execute("INSERT INTO expenses (date, category, amount, notes) VALUES (?, ?, ?, ?)",
+              (date, category, amount, notes))
+    conn.commit()
+    conn.close()
+
+def load_expenses():
+    conn = sqlite3.connect("expenses.db")
+    df = pd.read_sql("SELECT * FROM expenses", conn)
+    conn.close()
+    return df
+
+# -----------------------------
+# Streamlit App
+# -----------------------------
+st.set_page_config(page_title="Expense Tracker", layout="wide")
+st.title("💰 Personal Expense Tracker")
+
+init_db()
+
+# Sidebar Menu
+menu = st.sidebar.radio("Menu", ["Add Expense", "View Dashboard"])
+
+# -----------------------------
+# Add Expense Page
+# -----------------------------
+if menu == "Add Expense":
+    st.subheader("➕ Add a New Expense")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        expense_date = st.date_input("Date", date.today())
+        category = st.selectbox("Category", ["Food", "Transport", "Shopping", "Bills", "Other"])
+
+    with col2:
+        amount = st.number_input("Amount", min_value=0.0, step=10.0)
+        notes = st.text_input("Notes")
+
+    if st.button("Save Expense"):
+        insert_expense(expense_date.strftime("%Y-%m-%d"), category, amount, notes)
+        st.success("Expense saved successfully!")
+
+# -----------------------------
+# Dashboard Page
+# -----------------------------
+elif menu == "View Dashboard":
+    st.subheader("📊 Expense Dashboard")
+
+    df = load_expenses()
+
+    if df.empty:
+        st.info("No expenses added yet. Go to 'Add Expense' to enter data.")
+    else:
+        st.write("### Expense Records")
+        st.dataframe(df)
+
+        # Category-wise sum
+        st.write("### Total Spending by Category")
+        category_summary = df.groupby("category")["amount"].sum().reset_index()
+        st.bar_chart(category_summary.set_index("category"))
+
+        # Monthly trend
+        st.write("### Monthly Spending Trend")
+        df["date"] = pd.to_datetime(df["date"])
+        monthly_summary = df.groupby(df["date"].dt.to_period("M"))["amount"].sum().reset_index()
+        monthly_summary["date"] = monthly_summary["date"].astype(str)
+        st.line_chart(monthly_summary.set_index("date"))
