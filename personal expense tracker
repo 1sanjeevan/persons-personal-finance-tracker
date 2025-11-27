@@ -4,9 +4,9 @@ import pandas as pd
 import sqlite3
 from datetime import date
 
-# -----------------------------
+
 # Database Setup
-# -----------------------------
+
 def init_db():
     conn = sqlite3.connect("expenses.db")
     c = conn.cursor()
@@ -36,22 +36,22 @@ def load_expenses():
     conn.close()
     return df
 
-# -----------------------------
+
 # Streamlit App
-# -----------------------------
+
 st.set_page_config(page_title="Expense Tracker", layout="wide")
-st.title("💰 Personal Expense Tracker")
+st.title("Personal Expense Tracker")
 
 init_db()
 
 # Sidebar Menu
 menu = st.sidebar.radio("Menu", ["Add Expense", "View Dashboard"])
 
-# -----------------------------
+
 # Add Expense Page
-# -----------------------------
+
 if menu == "Add Expense":
-    st.subheader("➕ Add a New Expense")
+    st.subheader(" Add a New Expense")
 
     col1, col2 = st.columns(2)
 
@@ -67,11 +67,10 @@ if menu == "Add Expense":
         insert_expense(expense_date.strftime("%Y-%m-%d"), category, amount, notes)
         st.success("Expense saved successfully!")
 
-# -----------------------------
 # Dashboard Page
-# -----------------------------
+
 elif menu == "View Dashboard":
-    st.subheader("📊 Expense Dashboard")
+    st.subheader(" Expense Dashboard")
 
     df = load_expenses()
 
@@ -92,3 +91,4 @@ elif menu == "View Dashboard":
         monthly_summary = df.groupby(df["date"].dt.to_period("M"))["amount"].sum().reset_index()
         monthly_summary["date"] = monthly_summary["date"].astype(str)
         st.line_chart(monthly_summary.set_index("date"))
+
